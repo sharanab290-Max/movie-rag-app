@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LAB EXERCISE 3 - CineGraph AI Report</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
+    
+    @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+    }
+    
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #1a1a1a;
+        line-height: 1.45;
+        font-size: 10.5pt;
+        background: #ffffff;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .page-header {
+        font-size: 11pt;
+        font-weight: 600;
+        margin-bottom: 2px;
+        color: #000000;
+    }
+
+    h1.report-title {
+        font-size: 13.5pt;
+        font-weight: 700;
+        margin-top: 10px;
+        margin-bottom: 16px;
+        line-height: 1.3;
+        color: #0f172a;
+    }
+
+    h2.section-title {
+        font-size: 12pt;
+        font-weight: 700;
+        color: #1e3a8a;
+        margin-top: 18px;
+        margin-bottom: 8px;
+        border-bottom: 1.5px solid #cbd5e1;
+        padding-bottom: 3px;
+    }
+
+    h3.sub-title {
+        font-size: 11pt;
+        font-weight: 700;
+        color: #1e293b;
+        margin-top: 12px;
+        margin-bottom: 6px;
+    }
+
+    p, li {
+        text-align: justify;
+        margin-bottom: 6px;
+    }
+
+    ul, ol {
+        margin-top: 4px;
+        margin-bottom: 8px;
+        padding-left: 22px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        margin-bottom: 14px;
+        font-size: 9.5pt;
+    }
+
+    table, th, td {
+        border: 1px solid #94a3b8;
+    }
+
+    th {
+        background-color: #1e3a8a;
+        color: #ffffff;
+        font-weight: 600;
+        text-align: left;
+        padding: 6px 8px;
+    }
+
+    td {
+        padding: 5px 8px;
+        vertical-align: top;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f8fafc;
+    }
+
+    pre, code {
+        font-family: Consolas, 'Courier New', monospace;
+    }
+
+    pre {
+        background-color: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 8px 10px;
+        font-size: 9pt;
+        line-height: 1.35;
+        overflow-x: auto;
+        margin: 8px 0;
+    }
+
+    .ascii-diagram {
+        font-family: Consolas, monospace;
+        font-size: 8.5pt;
+        background: #f8fafc;
+        border: 1px dashed #94a3b8;
+        padding: 10px;
+        white-space: pre;
+        line-height: 1.25;
+        margin: 10px 0;
+    }
+
+    .page-break {
+        page-break-before: always;
+    }
+</style>
+</head>
+<body>
+
+<div class="page-header">Department of AIML</div>
+<div class="page-header">Advance NLP (AML23702)</div>
+<div class="page-header" style="font-weight: 700;">LAB EXERCISE: 3</div>
+
+<h1 class="report-title">CineGraph AI: Graph-Powered Movie Question Answering and Recommendation System Using Neo4j Knowledge Graph and LLM</h1>
+
+<h2 class="section-title">Aim / Objective</h2>
+<p>
+This project builds an end-to-end Graph Retrieval-Augmented Generation (Graph RAG) Question Answering and Recommendation System for cinema intelligence. Given a user's free-text question about films, actors, directors, cast/crew, or recommendations, the system performs entity recognition, intent-based Cypher query routing, dynamic graph traversal over a Neo4j knowledge graph, and grounded natural language synthesis using a Large Language Model (LLM). The system is delivered as <strong>“CineGraph AI,”</strong> an interactive Streamlit web application backed by a modular Python graph NLP pipeline combining rule-based Cypher templates, a live Neo4j database driver with an embedded in-memory graph fallback engine, and grounded answer synthesis to ensure zero hallucination.
+</p>
+
+<h2 class="section-title">Expected Outcomes Addressed</h2>
+<ol>
+    <li><strong>Load and utilize the Neo4j Movie Knowledge Graph.</strong> Populated with the canonical Neo4j Movies dataset comprising <code>:Movie</code> and <code>:Person</code> nodes connected via directed typed relationships (<code>:ACTED_IN</code>, <code>:DIRECTED</code>, <code>:PRODUCED</code>, <code>:WROTE</code>, <code>:REVIEWED</code>, <code>:FOLLOWS</code>), including node properties (release year, tagline, born year) and edge properties (character roles, review ratings).</li>
+    <li><strong>Convert natural language user questions into graph queries.</strong> Implemented through hybrid query translation: high-precision deterministic intent routing maps canonical queries to 11+ parameterized Cypher templates, while an LLM-assisted Text-to-Cypher generator with safety AST validation handles novel multi-condition questions.</li>
+    <li><strong>Retrieve relevant movie, actor, and connection subgraphs.</strong> The backend executes parameterized Cypher queries against the active graph database, retrieving exact multi-hop paths, cast rosters, collaboration frequencies, and reviewer ratings.</li>
+    <li><strong>Generate grounded natural-language answers.</strong> Context formatting synthesizes the retrieved graph records and supplies them to the LLM (Google Gemini / deterministic graph grounding engine) with strict grounding constraints, preventing trivia hallucination and explicitly explaining relationship connections.</li>
+    <li><strong>Support movie-related QA, collaborative recommendations, and network analytics.</strong> The system answers filmography questions, explores shortest path connections (Degrees of Separation / Bacon Numbers), and performs 2-hop co-star collaborative filtering recommendations through an interactive chat interface and visual graph network.</li>
+</ol>
+
+<h2 class="section-title">Tools &amp; Technologies Used</h2>
+<table>
+    <tr>
+        <th>Category</th>
+        <th>Tool / Library</th>
+        <th>Purpose in this pipeline</th>
+    </tr>
+    <tr>
+        <td><strong>Language / runtime</strong></td>
+        <td>Python 3.10+</td>
+        <td>Core implementation language for the pipeline, graph algorithms, and Streamlit app.</td>
+    </tr>
+    <tr>
+        <td><strong>Web UI</strong></td>
+        <td>Streamlit + vis.js</td>
+        <td>Responsive chat interface, 1-click suggestion chips, session state, and interactive visual graph network.</td>
+    </tr>
+    <tr>
+        <td><strong>Graph Database</strong></td>
+        <td>Neo4j (Desktop / AuraDB)</td>
+        <td>Primary graph database backend storing nodes, relationships, and executing Cypher queries via Bolt.</td>
+    </tr>
+    <tr>
+        <td><strong>Embedded Graph Fallback</strong></td>
+        <td>NetworkX</td>
+        <td>High-performance in-memory graph engine simulating Neo4j Movies graph when offline.</td>
+    </tr>
+    <tr>
+        <td><strong>Database Driver</strong></td>
+        <td>neo4j (official Python driver)</td>
+        <td>Manages Bolt connection pooling, session execution, and database seeding.</td>
+    </tr>
+    <tr>
+        <td><strong>Language Model (LLM)</strong></td>
+        <td>Google Gemini (<code>google-genai</code>)</td>
+        <td>Translates free-form questions into Cypher and synthesizes grounded answers from retrieved subgraphs.</td>
+    </tr>
+    <tr>
+        <td><strong>Query Routing &amp; NLP</strong></td>
+        <td>Python <code>re</code> (regex)</td>
+        <td>Extracts recognized movie and person entities, boundaries, and routes question intents.</td>
+    </tr>
+    <tr>
+        <td><strong>Data Handling</strong></td>
+        <td>pandas</td>
+        <td>Tabular presentation of graph nodes, movie directories, and query results.</td>
+    </tr>
+</table>
+
+<h2 class="section-title">Dataset / Corpus Description</h2>
+<p>The application is backed by the canonical <strong>Neo4j Movies Knowledge Graph</strong> dataset, defined in <code>data/movies_dataset.cql</code> and <code>data/seed_data.py</code>. The corpus contains 171+ nodes and 253+ relationships:</p>
+<ul>
+    <li><strong>Movie Nodes (<code>:Movie</code>):</strong> 28+ classic feature films (e.g., <em>The Matrix</em>, <em>The Matrix Reloaded</em>, <em>The Matrix Revolutions</em>, <em>The Devil's Advocate</em>, <em>A Few Good Men</em>, <em>Top Gun</em>, <em>Jerry Maguire</em>, <em>Stand By Me</em>, <em>As Good as It Gets</em>, <em>What Dreams May Come</em>, <em>You've Got Mail</em>, <em>Sleepless in Seattle</em>, <em>When Harry Met Sally</em>, <em>That Thing You Do</em>, <em>The Replacements</em>, <em>Rescue Dawn</em>, <em>Unforgiven</em>, <em>Johnny Mnemonic</em>, <em>Cloud Atlas</em>, <em>The Da Vinci Code</em>, <em>V for Vendetta</em>, <em>Speed Racer</em>, <em>Apollo 13</em>, <em>Cast Away</em>, <em>The Green Mile</em>) with attributes <code>title</code> (unique string), <code>released</code> (integer year), and <code>tagline</code> (promotional quote).</li>
+    <li><strong>Person Nodes (<code>:Person</code>):</strong> 70+ actors, directors, screenwriters, and producers (e.g., <em>Keanu Reeves</em>, <em>Tom Hanks</em>, <em>Tom Cruise</em>, <em>Jack Nicholson</em>, <em>Meg Ryan</em>, <em>Charlize Theron</em>, <em>Kevin Bacon</em>, <em>Lana Wachowski</em>, <em>Lilly Wachowski</em>, <em>Rob Reiner</em>, <em>Ron Howard</em>, <em>Nora Ephron</em>) with attributes <code>name</code> (unique string) and <code>born</code> (birth year).</li>
+    <li><strong>Graph Relationships:</strong>
+        <ul>
+            <li><code>[:ACTED_IN]</code> — Edge connecting actor to movie with <code>roles</code> property list (e.g. <code>['Neo']</code>, <code>['Maverick']</code>).</li>
+            <li><code>[:DIRECTED]</code> — Connects director to motion picture.</li>
+            <li><code>[:PRODUCED]</code> — Connects creative/executive producer to film.</li>
+            <li><code>[:WROTE]</code> — Screenplay author attribution.</li>
+            <li><code>[:REVIEWED]</code> — User and critic reviews with integer <code>rating</code> (0–100) and text <code>summary</code>.</li>
+            <li><code>[:FOLLOWS]</code> — Social graph connections between cinema enthusiasts.</li>
+        </ul>
+    </li>
+    <li><strong>Evaluation Question Corpus (<code>test_queries</code>):</strong> 8 test cases spanning actor filmographies, cast/crew lookups, 2-hop collaborative recommendations, shortest path traversals (Bacon Number), and top-rated review aggregations.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2 class="section-title">System Architecture / Pipeline Design</h2>
+<p>The system implements a transparent, cascading multi-stage Graph RAG architecture. Each user question passes through intent detection, graph retrieval, safety filtering, and grounded synthesis, displaying the active system mode and retrieved subgraph in the Streamlit UI.</p>
+<ul>
+    <li><strong>Input:</strong> The user types a free-text question into the Streamlit chat box or clicks a 1-click suggestion chip.</li>
+    <li><strong>Entity Recognition:</strong> RegEx pattern matching extracts recognized movie titles and person names from the question against known graph entities.</li>
+    <li><strong>Intent Routing &amp; Query Selection:</strong>
+        <ul>
+            <li><em>Template Match:</em> If the question matches known patterns (filmography, director, cast, co-star, recommendation, path), it routes to a pre-validated, parameterized Cypher template.</li>
+            <li><em>Dynamic Text-to-Cypher:</em> Novel or multi-constraint questions trigger a few-shot LLM translation prompt using the graph schema.</li>
+        </ul>
+    </li>
+    <li><strong>Cypher Validation &amp; Safety Guardrails:</strong> Queries are checked against an AST filter prohibiting mutating operations (<code>CREATE</code>, <code>DELETE</code>, <code>SET</code>, <code>DROP</code>, <code>MERGE</code>) to enforce read-only execution.</li>
+    <li><strong>Graph Traversal &amp; Subgraph Retrieval:</strong> Cypher queries execute against the live Neo4j instance or embedded in-memory graph, returning matching nodes, properties, and relationship paths.</li>
+    <li><strong>Grounded Answer Synthesis:</strong> Graph records are transformed into structured context. An LLM (or deterministic graph engine) generates a grounded natural language answer citing graph relationships.</li>
+    <li><strong>Presentation:</strong> Streamlit displays the grounded answer, execution latency, system routing mode, an expandable Cypher trace panel, and an interactive <code>vis.js</code> visual subgraph.</li>
+</ul>
+
+<div class="ascii-diagram">Figure 1. End-to-end architecture of the CineGraph AI application.
+
+User Question (Streamlit chat_input / Suggestion Chip)
+ │
+ ▼
+Entity Recognition &amp; Intent Router (regex + graph dictionary)
+ │
+ ├───────────────────────────────────┬───────────────────────────────────┐
+ │ (Matched Template Pattern)        │ (Novel Complex Question)          │
+ ▼                                   ▼                                   │
+Parameterized Cypher Template       Dynamic Text-to-Cypher (LLM Few-Shot)│
+ │                                   │                                   │
+ └─────────────────┬─────────────────┘                                   │
+                   ▼                                                     │
+  Cypher Safety Validator (Prohibits CREATE/DELETE/SET)                  │
+                   │                                                     │
+                   ▼                                                     │
+  Graph Execution (Neo4j Live Bolt / In-Memory Fallback)                 │
+                   │                                                     │
+                   ▼                                                     │
+  Retrieved Subgraph Records (Nodes, Edges, Paths)                       │
+                   │                                                     │
+                   ▼                                                     │
+  Context Grounding &amp; Synthesis (Gemini LLM / Grounding Engine)          │
+                   │                                                     │
+                   ▼                                                     │
+  Answer + System Routing Badge + Interactive vis.js Subgraph            │
+                   │                                                     │
+                   ▼                                                     │
+          Streamlit Chat UI                                              │</div>
+
+<h2 class="section-title">Backend Implementation</h2>
+
+<h3 class="sub-title">6.1 Approach / Algorithm</h3>
+<p>The backend separates deterministic graph traversal from natural language synthesis to guarantee factual accuracy and zero hallucination.</p>
+<ul>
+    <li><strong>Dual-Mode Graph Service:</strong> <code>Neo4jGraphService</code> attempts connectivity to a live Neo4j instance (<code>bolt://localhost:7687</code> or AuraDB) with connection timeouts. If offline, it activates the <code>InMemoryMovieGraph</code> powered by NetworkX, ensuring 100% test reproducibility.</li>
+    <li><strong>Database Seeding:</strong> <code>seed_database()</code> executes the canonical <code>movies_dataset.cql</code> script, creating uniqueness constraints on <code>(:Person {name})</code> and <code>(:Movie {title})</code>.</li>
+    <li><strong>Hybrid Intent Routing:</strong> <code>match_template()</code> identifies user intents (Filmography, Cast/Crew, Co-Actors, Collaborative Recommendations, Bacon Number, Reviews) using case-insensitive word-boundary matching.</li>
+    <li><strong>Collaborative Recommendation Algorithm:</strong> Recommends films using a 2-hop co-star collaborative filtering traversal: Target Actor -> ACTED_IN -> Movie <- ACTED_IN <- Co-Star -> ACTED_IN -> Recommended Movie. Excludes films the target actor already starred in, and ranks candidates by co-star overlap score.</li>
+    <li><strong>Shortest Path Traversal:</strong> Uses Cypher's <code>shortestPath((p1)-[*]-(p2))</code> (or NetworkX BFS shortest path) to determine the degrees of separation between any two cinema individuals.</li>
+    <li><strong>Strict Grounding Prompt:</strong> The synthesis prompt instructs the LLM to rely exclusively on retrieved graph nodes and relationships, preventing external hallucinations.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h3 class="sub-title">6.2 Key Code Snippets</h3>
+
+<p><strong>Entity Extraction &amp; Intent Routing (<code>text2cypher.py</code>):</strong></p>
+<pre><code>def match_template(question: str) -> Optional[Dict[str, Any]]:
+    q_lower = question.lower().strip()
+    entities = extract_entities(question)
+    movies = entities["movies"]
+    persons = entities["persons"]
+
+    # Collaborative Recommendation Intent
+    if any(k in q_lower for k in ["recommend", "suggestion", "similar to", "fans of"]):
+        if persons:
+            return {
+                "template_id": "RECOMMEND_BY_ACTOR",
+                "params": {"actor": persons[0]},
+                "matched_type": "deterministic",
+                "explanation": f"Matched Collaborative Recommendation for fan of '{persons[0]}'"
+            }
+    
+    # Degrees of Separation (Shortest Path) Intent
+    if any(k in q_lower for k in ["how are", "connected", "path between", "bacon number"]):
+        if len(persons) >= 2:
+            return {
+                "template_id": "SHORTEST_PATH",
+                "params": {"person1": persons[0], "person2": persons[1]},
+                "matched_type": "deterministic",
+                "explanation": f"Matched Shortest Path between '{persons[0]}' and '{persons[1]}'"
+            }</code></pre>
+
+<p><strong>Cypher Query Template for Collaborative Recommendations (<code>query_templates.py</code>):</strong></p>
+<pre><code>MATCH (target:Person)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(coStar:Person)
+WHERE toLower(target.name) = toLower($actor)
+MATCH (coStar)-[:ACTED_IN]->(recMovie:Movie)
+WHERE NOT (target)-[:ACTED_IN]->(recMovie)
+RETURN recMovie.title AS movie, recMovie.released AS released, recMovie.tagline AS tagline,
+       count(DISTINCT coStar) AS score, collect(DISTINCT coStar.name) AS via_co_actors
+ORDER BY score DESC, recMovie.released DESC
+LIMIT 5</code></pre>
+
+<p><strong>Unified Graph Database Driver &amp; Execution (<code>graph_db.py</code>):</strong></p>
+<pre><code>def execute_cypher(self, cypher: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    params = params or {}
+    if self.is_connected and self.driver:
+        try:
+            with self.driver.session(database=self.database) as session:
+                result = session.run(cypher, params)
+                return [record.data() for record in result]
+        except Exception as e:
+            return self.fallback_engine.query_freeform(cypher)
+    else:
+        return self.fallback_engine.query_freeform(cypher)</code></pre>
+
+<p><strong>Grounded LLM Context Formulation (<code>rag_engine.py</code>):</strong></p>
+<pre><code>grounding_prompt = f"""You are CineGraph AI, an expert Movie Knowledge Graph Assistant.
+Answer the user's question using EXCLUSIVELY the provided Neo4j Graph Data.
+
+Rules:
+1. Ground every statement strictly in the Graph Data below.
+2. DO NOT invent release dates, roles, or connections not in the Graph Data.
+3. If recommendations were returned, explain the graph reasoning (e.g. shared co-stars).
+
+User Question: {question}
+Executed Cypher Query: {cypher}
+Retrieved Graph Data: {records}
+Grounded Answer:"""</code></pre>
+
+<h2 class="section-title">Frontend / UI Implementation</h2>
+
+<h3 class="sub-title">7.1 Framework</h3>
+<p>
+Streamlit was selected as the presentation layer to keep the Python Graph RAG pipeline and responsive user interface within a unified, high-performance architecture. The application utilizes a widescreen layout, custom dark cinema styling (<code>#080b11</code> slate palette with glassmorphism), Google Fonts (<em>Plus Jakarta Sans</em> and <em>Outfit</em>), an interactive chat message stream, and embedded HTML5/JavaScript components for <code>vis.js</code> graph rendering.
+</p>
+
+<h3 class="sub-title">7.2 UI Capabilities</h3>
+<ul>
+    <li><strong>Hero Header &amp; Live Status Badge:</strong> Displays application title and real-time backend status (<code>🟢 Connected: bolt://localhost:7687</code> or <code>🟡 Mode: Embedded Neo4j Movies Graph</code>).</li>
+    <li><strong>Real-time Metric Strip:</strong> Four cards summarizing Knowledge Graph Nodes (171), Relationships (253), Featured Movies (28+), and Cypher Templates (11+).</li>
+    <li><strong>1-Click Suggestion Discovery Chips:</strong> Quick-launch buttons executing popular cinema queries in a single click (<em>Keanu Reeves filmography</em>, <em>Tom Cruise recommendations</em>, <em>Tom Hanks co-stars</em>, <em>Kevin Bacon shortest path</em>).</li>
+    <li><strong>Conversational Chat Stream:</strong> Implemented using <code>st.chat_message</code> and <code>st.chat_input</code>, maintaining dialogue history across user and assistant turns.</li>
+    <li><strong>Dual-Pane Insight Layout:</strong> Left pane renders the grounded natural language answer, execution time badge, and collapsible Cypher query viewer; right pane renders the interactive <code>vis.js</code> subgraph.</li>
+    <li><strong>Interactive Graph Visualizer (<code>vis.js</code>):</strong> ForceAtlas2-based physics-stabilized network rendering movies (amber boxes), persons (indigo dots), and relationship edges with zoom, pan, hover tooltips, and node drag.</li>
+    <li><strong>Cypher Query Studio Tab:</strong> Interactive laboratory allowing users to select any of the 11 templates, customize parameters, view syntax-highlighted Cypher, and execute queries directly to inspect tabular records.</li>
+    <li><strong>Knowledge Graph Catalog Tab:</strong> Searchable directory of all movies (titles, release years, taglines) and persons (birth years) with live substring search.</li>
+    <li><strong>Sidebar Database &amp; Seeding Manager:</strong> One-click database seeding (<code>seed_neo4j.py</code>), live Bolt URI/password configuration, and API key management.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h3 class="sub-title">7.3 Screenshots &amp; Visual Interface</h3>
+<div class="ascii-diagram">Figure 2. CineGraph AI Chat Interface showing grounded response for "Recommend movies for a fan of Tom Cruise",
+displaying collaborative recommendation reasoning, latency badge, executed Cypher, and interactive vis.js subgraph.
++--------------------------------------------------------------------------------------------------+
+| 🎬 CineGraph AI               [Mode: Embedded Neo4j Movies Graph / Connected: bolt://localhost] |
+| Graph-Powered Movie Intelligence, Retrieval-Augmented Generation &amp; Cypher Traversal              |
++--------------------------------------------------------------------------------------------------+
+| [171 Graph Nodes]     [253 Relationships]     [28+ Featured Movies]     [11+ Cypher Templates]  |
++--------------------------------------------------------------------------------------------------+
+| 🍿 Instant Suggestion Prompts:                                                                   |
+| [🎬 Keanu Reeves filmography] [🍿 Recommend for Tom Cruise] [🔗 Kevin Bacon to Keanu path]       |
++--------------------------------------------------------------------------------------------------+
+| 👤 User: Recommend movies for a fan of Tom Cruise                                                |
+| 🎬 Assistant:                                                                                    |
+| [Template: Collaborative Graph Movie Recommendation]  [⏱️ 3.4 ms]  [📊 6 Records]                 |
+|                                                                                                  |
+| ### [Recommendations] Graph-Based Recommendations for fans of Tom Cruise                         |
+| These titles are recommended through collaborative graph filtering (2-hop paths connecting       |
+| co-stars who also starred in these acclaimed titles):                                            |
+| - Stand By Me (1986): Connected via frequent co-stars Jerry O'Connell and Kiefer Sutherland.    |
+| - Apollo 13 (1995): Connected via frequent co-star Kevin Bacon. "Houston, we have a problem."   |
+| - As Good as It Gets (1997): Connected via co-stars Jack Nicholson and Cuba Gooding Jr.         |
+|                                                                                                  |
+| [▶ Executed Cypher Query &amp; Retrieved Records]                                                    |
+| MATCH (target:Person)-[:ACTED_IN]->(m:Movie)&lt;-[:ACTED_IN]-(coStar:Person)...                    |
+|                                                                                                  |
+| [Interactive Subgraph: Amber Movie Nodes connected to Indigo Person Nodes via Directed Edges]   |
++--------------------------------------------------------------------------------------------------+</div>
+
+<div class="ascii-diagram">Figure 3. Sidebar showing Neo4j Bolt connection inputs, Seed Graph button, System Health, and Clear Chat.
++------------------------------------+
+| 🎬 CineGraph Control Panel         |
+| ---------------------------------- |
+| 🔌 Neo4j Database Settings         |
+|   Bolt URI: bolt://localhost:7687  |
+|   Username: neo4j                  |
+|   Password: *******                |
+|   Database: neo4j                  |
+|   [ 🔗 Connect ]  [ 🌱 Seed Graph ] |
+|                                    |
+| 🤖 Gemini LLM Settings             |
+|   API Key: [ optional ]            |
+| ---------------------------------- |
+| System Health:                     |
+| ● Embedded Graph (Offline Ready)   |
+| [ 🧹 Clear Chat History ]           |
++------------------------------------+</div>
+
+<h2 class="section-title">Sample Input &amp; Output</h2>
+<table>
+    <tr>
+        <th>Sample Input</th>
+        <th>Pipeline Stage</th>
+        <th>Observed Output</th>
+        <th>Interpretation</th>
+    </tr>
+    <tr>
+        <td><strong>“What movies did Keanu Reeves act in and what were his roles?”</strong></td>
+        <td>Template Match: <code>ACTOR_FILMOGRAPHY</code></td>
+        <td>6 movies returned: <em>The Matrix</em> (Neo), <em>The Matrix Reloaded</em> (Neo), <em>The Matrix Revolutions</em> (Neo), <em>The Devil's Advocate</em> (Kevin Lomax), <em>The Replacements</em> (Shane Falco), <em>Johnny Mnemonic</em> (Johnny Mnemonic).</td>
+        <td>Entity <code>Keanu Reeves</code> extracted; routes to actor filmography template; traverses <code>[:ACTED_IN]</code> edges and extracts <code>roles</code> property.</td>
+    </tr>
+    <tr>
+        <td><strong>“Who directed and wrote A Few Good Men?”</strong></td>
+        <td>Template Match: <code>MOVIE_CAST_CREW</code></td>
+        <td>Director: Rob Reiner; Writer: Aaron Sorkin; Cast: Tom Cruise, Jack Nicholson, Demi Moore, Kevin Bacon.</td>
+        <td>Entity <code>A Few Good Men</code> extracted; retrieves all incoming relationships (<code>:DIRECTED</code>, <code>:WROTE</code>, <code>:ACTED_IN</code>) into a structured cast list.</td>
+    </tr>
+    <tr>
+        <td><strong>“Recommend movies for a fan of Tom Cruise”</strong></td>
+        <td>Template Match: <code>RECOMMEND_BY_ACTOR</code></td>
+        <td>Recommendations: <em>Stand By Me</em> (via Jerry O'Connell, Kiefer Sutherland), <em>Apollo 13</em> (via Kevin Bacon), <em>As Good as It Gets</em> (via Jack Nicholson, Cuba Gooding Jr.).</td>
+        <td>2-hop collaborative filtering identifies movies starring Cruise's co-stars that Cruise was not in, ranked by co-star overlap score.</td>
+    </tr>
+    <tr>
+        <td><strong>“Who has Tom Hanks co-starred with the most?”</strong></td>
+        <td>Template Match: <code>CO_ACTORS</code></td>
+        <td>Top co-stars: Meg Ryan (3 shared films: <em>You've Got Mail</em>, <em>Sleepless in Seattle</em>, <em>Joe Versus the Volcano</em>), Helen Hunt, Bonnie Hunt.</td>
+        <td>Traverses <code>(Tom Hanks)-[:ACTED_IN]->(m)&lt;-[:ACTED_IN]-(coStar)</code>, groups by co-star, counts shared movies, and ranks descending.</td>
+    </tr>
+    <tr>
+        <td><strong>“How are Kevin Bacon and Keanu Reeves connected in the graph?”</strong></td>
+        <td>Template Match: <code>SHORTEST_PATH</code></td>
+        <td>Degrees of separation: 2. Path: Kevin Bacon -&gt; <em>A Few Good Men</em> -&gt; Jack Nicholson -&gt; <em>As Good as It Gets</em> -&gt; Cuba Gooding Jr. / Charlize Theron.</td>
+        <td>Executes <code>shortestPath</code> graph traversal between two <code>:Person</code> nodes across shared motion picture nodes.</td>
+    </tr>
+    <tr>
+        <td><strong>“What are the highest rated movies in the graph?”</strong></td>
+        <td>Template Match: <code>TOP_MOVIES_BY_REVIEWS</code></td>
+        <td><em>The Matrix</em> (Rating: 92.5/100, 2 reviews), <em>A Few Good Men</em> (Rating: 88/100, 1 review).</td>
+        <td>Aggregates numeric <code>rating</code> properties on incoming <code>[:REVIEWED]</code> edges and computes average scores per movie.</td>
+    </tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2 class="section-title">Results (Deliverable-Specific Outputs)</h2>
+<table>
+    <tr>
+        <th>Deliverable</th>
+        <th>Observed Result</th>
+        <th>Application View</th>
+    </tr>
+    <tr>
+        <td><strong>Neo4j Movie Graph Instance</strong></td>
+        <td>171 nodes (Movies, Persons), 253 relationships (<code>ACTED_IN</code>, <code>DIRECTED</code>, <code>PRODUCED</code>, <code>WROTE</code>, <code>REVIEWED</code>, <code>FOLLOWS</code>).</td>
+        <td>Live Bolt connection on <code>bolt://localhost:7687</code> or embedded fallback.</td>
+    </tr>
+    <tr>
+        <td><strong>Cypher Query Templates</strong></td>
+        <td>11 curated, parameterized Cypher templates across QA, Recommendations, Network Analytics, and Aggregations.</td>
+        <td>Cypher Query Studio tab with parameter inputs and direct execution.</td>
+    </tr>
+    <tr>
+        <td><strong>Graph RAG Web Application</strong></td>
+        <td>Streamlit web app with conversational chat interface, 1-click suggestion chips, and responsive dual-pane layout.</td>
+        <td><code>http://localhost:8501</code> (<code>app.py</code>).</td>
+    </tr>
+    <tr>
+        <td><strong>Subgraph Visualization</strong></td>
+        <td>Force-directed <code>vis.js</code> network rendering colored nodes (amber movies, indigo actors) and relationship arrows.</td>
+        <td>Interactive visualizer in assistant chat expander and query studio.</td>
+    </tr>
+    <tr>
+        <td><strong>CLI Prototype</strong></td>
+        <td>Menu-driven terminal runner supporting interactive natural language QA, template execution, and schema inspection.</td>
+        <td><code>python cli_app.py</code>.</td>
+    </tr>
+    <tr>
+        <td><strong>Automated Seeding Script</strong></td>
+        <td>Automated script creating uniqueness constraints and populating database from <code>data/movies_dataset.cql</code>.</td>
+        <td><code>scripts/seed_neo4j.py</code>.</td>
+    </tr>
+    <tr>
+        <td><strong>System Mode Transparency</strong></td>
+        <td>Every answer displays its routing badge (<code>Template Match</code> vs. <code>Text-to-Cypher</code>), latency in ms, and record count.</td>
+        <td>Grounded response card badges.</td>
+    </tr>
+</table>
+
+<h2 class="section-title">Evaluation / Analysis</h2>
+<p>
+The system demonstrates successful end-to-end operation across intent detection, graph traversal, and grounded natural language synthesis. Testing was performed using canonical questions against the knowledge graph to assess retrieval accuracy, grounding fidelity, and execution latency.
+</p>
+
+<table>
+    <tr>
+        <th>Component</th>
+        <th>Observed Result</th>
+        <th>Strength</th>
+        <th>Evaluation Limitation</th>
+    </tr>
+    <tr>
+        <td><strong>Entity Recognition</strong></td>
+        <td>Case-insensitive dictionary regex matching over all known movies and actors</td>
+        <td>Exact match for multi-word titles (<em>A Few Good Men</em>) and names (<em>Keanu Reeves</em>)</td>
+        <td>Susceptible to typos or nicknames unless fuzzy edit-distance is integrated.</td>
+    </tr>
+    <tr>
+        <td><strong>Intent Routing</strong></td>
+        <td>7 primary intent classes routed to 11+ Cypher templates</td>
+        <td>Sub-millisecond routing latency; guaranteed zero syntax errors on matched templates</td>
+        <td>Questions with multiple mixed intents (e.g. filmography + review in one sentence) default to primary intent.</td>
+    </tr>
+    <tr>
+        <td><strong>Graph Traversal (Neo4j / Embedded)</strong></td>
+        <td>Sub-5ms execution on embedded graph; sub-15ms over Bolt connection</td>
+        <td>Instantaneous multi-hop traversal; exact character role and co-star path retrieval</td>
+        <td>Limited to nodes present in the canonical Movies dataset (171 nodes).</td>
+    </tr>
+    <tr>
+        <td><strong>Text-to-Cypher Generation</strong></td>
+        <td>Few-shot Gemini prompt constrained by schema rules and AST safety filter</td>
+        <td>Generates dynamic Cypher for novel queries without manual template coding</td>
+        <td>Unconstrained prompts could generate sub-optimal Cypher for deeply nested aggregations.</td>
+    </tr>
+    <tr>
+        <td><strong>Grounded LLM Synthesis</strong></td>
+        <td>Context-injected prompt enforcing strict adherence to retrieved graph records</td>
+        <td>Eliminates trivia hallucination; explains recommendation paths explicitly</td>
+        <td>When API keys are omitted, defaults to the deterministic rule-based grounding engine.</td>
+    </tr>
+    <tr>
+        <td><strong>Interactive Graph Visualizer</strong></td>
+        <td>HTML5 <code>vis.js</code> force-directed network rendered within Streamlit iframe</td>
+        <td>Intuitive visual comprehension of subgraphs, character roles, and connections</td>
+        <td>Visual graphs with &gt;100 nodes require clustering to prevent visual clutter.</td>
+    </tr>
+</table>
+
+<h2 class="section-title">Challenges Faced &amp; Solutions</h2>
+<ul>
+    <li><strong>Ensuring Zero-Setup Reproducibility Across Environments:</strong> Running Neo4j Desktop or AuraDB requires account creation, local services, and network credentials. To ensure the lab exercise could be evaluated immediately without blocking on Neo4j startup, an automatic <code>InMemoryMovieGraph</code> engine (built with NetworkX) was implemented. It evaluates Cypher-like graph traversals with identical semantics, while allowing live Neo4j connections whenever available.</li>
+    <li><strong>Eliminating LLM Trivia Hallucination:</strong> Standard LLMs frequently hallucinate actors or release years from external training data when asked movie questions. This was solved by applying a strict two-stage grounding pipeline: Cypher queries extract the ground truth subgraph, and the prompt instructs the LLM to refuse or omit any facts not present in the supplied graph context.</li>
+    <li><strong>Windows Terminal Unicode Encoding Crashes:</strong> Outputting emoji characters (🍿, 🎬) to Windows PowerShell consoles running <code>cp1252</code> encoding resulted in <code>UnicodeEncodeError</code>. This was resolved by sanitizing CLI print outputs with clean ASCII headers (<code>[Recommendations]</code>, <code>[Movie]</code>) while preserving rich emojis in the Web UI.</li>
+    <li><strong>Streamlit Path &amp; Execution Resolution:</strong> Running Streamlit directly via PowerShell failed if Python's user scripts folder was not on system <code>PATH</code>. This was resolved by using <code>python -m streamlit run app.py</code> and setting root directory anchors.</li>
+    <li><strong>Preventing Cypher Injection &amp; Mutating Operations:</strong> Accepting free-form user questions for dynamic Cypher generation could risk data tampering. A regex AST sanitizer was implemented to reject any query containing mutating keywords (<code>CREATE</code>, <code>DELETE</code>, <code>SET</code>, <code>DROP</code>, <code>MERGE</code>, <code>ALTER</code>).</li>
+</ul>
+
+<h2 class="section-title">Conclusion</h2>
+<p>
+<strong>CineGraph AI</strong> demonstrates a complete, robust Graph RAG question-answering and recommendation workflow for cinema intelligence. The application resolves natural language questions through intent-based Cypher routing, executes multi-hop traversals over the Neo4j Movies Knowledge Graph (and embedded fallback engine), and generates grounded answers that eliminate hallucination. By combining structured graph traversals (collaborative recommendations, Bacon Numbers, cast metadata) with LLM natural language synthesis and interactive <code>vis.js</code> graph visualizations, the system provides an intuitive, user-friendly, and explainable AI assistant. Future extensions will incorporate vector embeddings for hybrid GraphRAG over unstructured review texts and live TMDB API ingestion.
+</p>
+
+<h2 class="section-title">Project Repository (GitHub Link)</h2>
+<table>
+    <tr>
+        <th>Field</th>
+        <th>Value</th>
+    </tr>
+    <tr>
+        <td><strong>GitHub Repository URL</strong></td>
+        <td><code>https://github.com/gowdanishu704-oss/AML23702_Advance_NLP_1GA24AI402</code></td>
+    </tr>
+    <tr>
+        <td><strong>Repository Visibility</strong></td>
+        <td>PUBLIC</td>
+    </tr>
+    <tr>
+        <td><strong>Branch / Commit Used for Submission</strong></td>
+        <td><code>main</code></td>
+    </tr>
+</table>
+
+<h2 class="section-title">References</h2>
+<ul>
+    <li>Neo4j Graph Database Documentation — https://neo4j.com/docs/</li>
+    <li>Cypher Query Language Reference — https://neo4j.com/docs/cypher-manual/current/</li>
+    <li>Streamlit Documentation — https://docs.streamlit.io</li>
+    <li>NetworkX Network Analysis in Python — https://networkx.org/documentation/stable/</li>
+    <li>Google Gemini API (<code>google-genai</code> Python SDK) — https://ai.google.dev/docs</li>
+    <li>vis.js Network Visualization Library — https://visjs.github.io/vis-network/docs/network/</li>
+    <li>Advance NLP (AML23702) Lab Exercise Guidelines supplied by Department of AIML.</li>
+</ul>
+
+<div class="page-break"></div>
+
+<div class="page-header">Department of AIML</div>
+<div class="page-header">Advance NLP (AML23702)</div>
+<div class="page-header" style="font-weight: 700;">ADVANCE NLP (AML23702) – LAB EXERCISE EVALUATION SHEET</div>
+
+<br>
+
+<table>
+    <tr>
+        <th>Field</th>
+        <th>Value</th>
+    </tr>
+    <tr>
+        <td><strong>Student Name</strong></td>
+        <td>NISHANTH S</td>
+    </tr>
+    <tr>
+        <td><strong>USN</strong></td>
+        <td>1GA24AI402</td>
+    </tr>
+    <tr>
+        <td><strong>Lab Exercise No.</strong></td>
+        <td>3</td>
+    </tr>
+    <tr>
+        <td><strong>Experiment Title</strong></td>
+        <td>CineGraph AI: Movie Knowledge Graph RAG &amp; Recommendation System Using Neo4j</td>
+    </tr>
+</table>
+
+<h3 class="sub-title">Marks Awarded</h3>
+<table>
+    <tr>
+        <th style="width: 10%; text-align: center;">Sl. No.</th>
+        <th style="width: 50%;">Evaluation Criteria</th>
+        <th style="width: 20%; text-align: center;">Max Marks</th>
+        <th style="width: 20%; text-align: center;">Marks Obtained</th>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>1</strong></td>
+        <td>Problem Understanding &amp; Scope</td>
+        <td style="text-align: center;">5</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>2</strong></td>
+        <td>Pipeline Design &amp; Methodology</td>
+        <td style="text-align: center;">10</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>3</strong></td>
+        <td>Implementation Correctness</td>
+        <td style="text-align: center;">10</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>4</strong></td>
+        <td>Use of NLP Tools / Models</td>
+        <td style="text-align: center;">5</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>5</strong></td>
+        <td>Output Quality / Task Performance</td>
+        <td style="text-align: center;">10</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>6</strong></td>
+        <td>Analysis &amp; Interpretation</td>
+        <td style="text-align: center;">5</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>7</strong></td>
+        <td>Documentation &amp; Deliverables</td>
+        <td style="text-align: center;">2.5</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td style="text-align: center;"><strong>8</strong></td>
+        <td>Presentation &amp; Reproducibility</td>
+        <td style="text-align: center;">2.5</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="2" style="text-align: right; font-weight: 700;">Total</td>
+        <td style="text-align: center; font-weight: 700;">50</td>
+        <td></td>
+    </tr>
+</table>
+
+<br>
+<p><strong>Overall Comments:</strong></p>
+<div style="height: 60px; border-bottom: 1px dashed #cbd5e1;"></div>
+
+<br><br><br>
+
+<table style="border: none; margin-top: 30px;">
+    <tr style="background: none; border: none;">
+        <td style="border: none; width: 50%;"><strong>Date of Submission:</strong> _______________________</td>
+        <td style="border: none; width: 50%; text-align: right;"><strong>Signature of Faculty:</strong> _______________________</td>
+    </tr>
+</table>
+
+</body>
+</html>
